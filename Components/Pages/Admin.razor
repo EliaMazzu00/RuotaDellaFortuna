@@ -1,0 +1,735 @@
+@page "/admin"
+@layout BareLayout
+@implements IAsyncDisposable
+@inject BoardService Board
+@inject IJSRuntime JS
+
+@*
+    Il pannello di regia: qui si prepara la partita e la si conduce.
+    A differenza del tabellone, mostra tutto — frase in chiaro compresa.
+*@
+
+<PageTitle>Regia — La Ruota della Fortuna</PageTitle>
+
+<div class="admin">
+
+    <header class="topbar">
+        <div class="brand">
+            <span class="brand-icon" aria-hidden="true">🎡</span>
+            <span class="brand-text">Regia</span>
+            <span class="brand-sub">La Ruota della Fortuna</span>
+        </div>
+
+        <div class="topbar-right">
+            @if (Board.IsActive)
+            {
+                <span class="progress" title="Frase corrente sul totale">
+                    <strong>@Board.PuzzleNumber</strong> / @Board.PuzzlesTotal
+                </span>
+            }
+
+            <span class="status status-@Board.Status.ToString().ToLowerInvariant()">@StatusLabel</span>
+
+            <a class="topbar-link" href="/display" target="_blank" rel="noopener">Tabellone ↗</a>
+            <a class="topbar-link" href="/remote" target="_blank" rel="noopener">Tastiera ↗</a>
+
+            <button class="topbar-link as-button" @onclick="() => showShortcuts = !showShortcuts">
+                ⌨ Scorciatoie
+            </button>
+        </div>
+    </header>
+
+    @if (showShortcuts)
+    {
+        <div class="shortcuts" role="note">
+            <div class="shortcuts-title">Scorciatoie da tastiera</div>
+            <ul>
+                <li><kbd>A</kbd>–<kbd>Z</kbd> chiama la lettera</li>
+                <li><kbd>Invio</kbd> manda la prima frase, poi passa alla successiva</li>
+                <li><kbd>Ctrl</kbd>+<kbd>Invio</kbd> rivela tutta la frase</li>
+                <li><kbd>→</kbd> passa il turno</li>
+                <li><kbd>1</kbd>–<kbd>4</kbd> dai il turno al concorrente</li>
+                <li><kbd>+</kbd> / <kbd>−</kbd> un punto al concorrente di turno</li>
+            </ul>
+            <div class="shortcuts-note">Non valgono mentre stai scrivendo in un campo di testo.</div>
+        </div>
+    }
+
+    <div class="grid">
+
+        <!-- ================= PREPARAZIONE ================= -->
+        <section class="panel">
+            <h2>Preparazione</h2>
+
+            <details class="block" open>
+                <summary>Cosa si vede sul tabellone</summary>
+                <div class="block-body">
+                    <label class="check">
+                        <input type="checkbox" @bind="cfgShowCategory" />
+                        <span>La categoria della frase</span>
+                    </label>
+                    <label class="check">
+                        <input type="checkbox" @bind="cfgShowCalled" />
+                        <span>Le lettere già chiamate</span>
+                    </label>
+                    <label class="check">
+                        <input type="checkbox" @bind="cfgShowScores" />
+                        <span>I punteggi dei concorrenti</span>
+                    </label>
+                </div>
+            </details>
+
+            <details class="block" open>
+                <summary>Forma del tabellone</summary>
+                <div class="block-body">
+                    <div class="radios">
+                        <label class="radio">
+                            <input type="radio" name="layout"
+                                   checked="@(cfgLayout == BoardLayout.Classic)"
+                                   @onchange="() => cfgLayout = BoardLayout.Classic" />
+                            <span>Classico TV <em>12·14·14·12</em></span>
+                        </label>
+                        <label class="radio">
+                            <input type="radio" name="layout"
+                                   checked="@(cfgLayout == BoardLayout.Custom)"
+                                   @onchange="() => cfgLayout = BoardLayout.Custom" />
+                            <span>Personalizzato</span>
+                        </label>
+                    </div>
+
+                    @if (cfgLayout == BoardLayout.Custom)
+                    {
+                        <div class="field">
+                            <label for="rows">Una larghezza per riga</label>
+                            <input id="rows" type="text" placeholder="12 14 14 12" @bind="cfgRows" />
+                            <p class="hint">
+                                Da 1 a @BoardLayoutEngine.MaxRows righe, ognuna da
+                                @BoardLayoutEngine.MinRowWidth a @BoardLayoutEngine.MaxRowWidth celle.
+                                Separale con uno spazio.
+                            </p>
+                        </div>
+                    }
+
+                    <div class="field">
+                        <label for="pre">Lettere regalate a inizio frase</label>
+                        <input id="pre" type="text" maxlength="10" placeholder="nessuna — es. RSTLNE"
+                               @bind="cfgPreRevealed" />
+                    </div>
+
+                    <div class="radios">
+                        <label class="radio">
+                            <input type="radio" name="order" checked="@(!cfgShuffle)"
+                                   @onchange="() => cfgShuffle = false" />
+                            <span>Frasi in ordine</span>
+                        </label>
+                        <label class="radio">
+                            <input type="radio" name="order" checked="@cfgShuffle"
+                                   @onchange="() => cfgShuffle = true" />
+                            <span>Frasi mescolate</span>
+                        </label>
+                    </div>
+
+                    <button class="btn btn-primary" @onclick="ApplyConfig">Applica</button>
+                </div>
+            </details>
+
+            <details class="block" open>
+                <summary>Da dove prendere le frasi</summary>
+                <div class="block-body">
+                    <fieldset disabled="@Board.IsActive">
+                        @if (Board.IsActive)
+                        {
+                            <p class="hint locked">
+                                Le frasi non si cambiano a partita avviata: premi <strong>Reset</strong> per sbloccare.
+                            </p>
+                        }
+
+                        <div class="radios stacked">
+                            <label class="radio">
+                                <input type="radio" name="source"
+                                       checked="@(cfgSource == PuzzleSource.Program)"
+                                       @onchange="() => ChangeSource(PuzzleSource.Program)" />
+                                <span>Frasi del programma</span>
+                            </label>
+                            <label class="radio">
+                                <input type="radio" name="source"
+                                       checked="@(cfgSource == PuzzleSource.File)"
+                                       @onchange="() => ChangeSource(PuzzleSource.File)" />
+                                <span>Un file dal computer</span>
+                            </label>
+                            <label class="radio">
+                                <input type="radio" name="source"
+                                       checked="@(cfgSource == PuzzleSource.Manual)"
+                                       @onchange="() => ChangeSource(PuzzleSource.Manual)" />
+                                <span>Frasi scritte a mano</span>
+                            </label>
+                        </div>
+
+                        @if (cfgSource == PuzzleSource.Program)
+                        {
+                            <div class="field">
+                                <div class="themes-head">
+                                    <label>Temi</label>
+                                    <span class="themes-actions">
+                                        <button class="btn-mini" @onclick="SelectAllThemes">tutti</button>
+                                        <button class="btn-mini" @onclick="ClearThemes">nessuno</button>
+                                    </span>
+                                </div>
+
+                                <div class="themes">
+                                    @foreach (var theme in Board.AvailableThemes)
+                                    {
+                                        <label class="theme @(selectedThemes.Contains(theme.Id) ? "on" : "")">
+                                            <input type="checkbox"
+                                                   checked="@selectedThemes.Contains(theme.Id)"
+                                                   @onchange="e => ToggleTheme(theme.Id, e)" />
+                                            <span class="theme-name">@theme.Name</span>
+                                            <span class="theme-count">@theme.Count</span>
+                                        </label>
+                                    }
+
+                                    @if (Board.AvailableThemes.Count == 0)
+                                    {
+                                        <p class="hint">
+                                            Nessun tema trovato nella cartella <code>frasi/</code>.
+                                        </p>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        else if (cfgSource == PuzzleSource.File)
+                        {
+                            <div class="field">
+                                <label>File di testo, una frase per riga</label>
+                                <InputFile OnChange="OnFileSelected" accept=".txt,.csv,text/plain" />
+                                <p class="hint">Formato: <code>CATEGORIA | FRASE</code></p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="field">
+                                <label for="manual">Scrivi o incolla le frasi, una per riga</label>
+                                <textarea id="manual" rows="6"
+                                          placeholder="PROVERBIO | CHI DORME NON PIGLIA PESCI"
+                                          @bind="manualText"></textarea>
+                                <button class="btn btn-secondary" @onclick="LoadManualPuzzles">
+                                    Carica queste frasi
+                                </button>
+                            </div>
+                        }
+                    </fieldset>
+
+                    <p class="loaded">@Board.PuzzlesInfo</p>
+
+                    @if (message is not null)
+                    {
+                        <p class="message">@message</p>
+                    }
+
+                    @if (Board.PuzzleStatuses.Count > 0)
+                    {
+                        <div class="badges">
+                            <span class="badge ok">@Board.FittingCount entrano nel tabellone</span>
+                            @if (Board.OversizeCount > 0)
+                            {
+                                <span class="badge warn">@Board.OversizeCount più lunghe</span>
+                            }
+                        </div>
+
+                        <p class="hint">
+                            Controllo riferito al layout applicato (@Board.LayoutDescription).
+                            Le frasi più lunghe restano giocabili: vanno su una griglia più grande.
+                        </p>
+
+                        @if (Board.OversizeCount > 0)
+                        {
+                            <details class="oversize">
+                                <summary>Vedi le @Board.OversizeCount frasi più lunghe</summary>
+                                <ul>
+                                    @foreach (var status in Board.OversizePuzzles)
+                                    {
+                                        <li>
+                                            <span class="oversize-cat">@status.Category</span>
+                                            @status.Phrase
+                                            <span class="oversize-lines">@status.LineCount righe</span>
+                                        </li>
+                                    }
+                                </ul>
+                            </details>
+                        }
+                    }
+                </div>
+            </details>
+        </section>
+
+        <!-- ================= CONDUZIONE ================= -->
+        <section class="panel play">
+
+            <div class="controls">
+                @if (!Board.IsActive)
+                {
+                    <button class="btn btn-start" disabled="@(Board.PuzzleCount == 0)" @onclick="Board.Start">
+                        ▶ Manda la prima frase
+                    </button>
+                }
+                else
+                {
+                    <button class="btn btn-next" disabled="@(!Board.HasNextPuzzle)" @onclick="Board.NextPuzzle">
+                        ⏭ Frase successiva
+                    </button>
+                    <button class="btn btn-secondary" @onclick="Board.RestartPuzzle">
+                        ↻ Ricopri
+                    </button>
+                    <button class="btn btn-solve" disabled="@(Board.Status != BoardStatus.Playing)" @onclick="Board.Solve">
+                        💡 Rivela tutto
+                    </button>
+                }
+                <button class="btn btn-reset" @onclick="Board.Reset">↺ Reset</button>
+            </div>
+
+            @if (Board.IsActive)
+            {
+                <div class="puzzle-bar">
+                    <span class="puzzle-category">@Board.Category</span>
+
+                    @if (Board.Status == BoardStatus.Solved)
+                    {
+                        <span class="pill solved">Risolto</span>
+                    }
+                    else
+                    {
+                        <span class="pill">@Board.LettersRemaining lettere coperte</span>
+                        <span class="meter" title="Lettere scoperte">
+                            <span class="meter-fill" style="width:@RevealedPercent%"></span>
+                        </span>
+                    }
+                </div>
+
+                @* Anteprima di regia: l'admin vede tutta la frase.
+                   Un clic su una cella coperta la scopre, per dare un aiuto mirato. *@
+                <div class="preview">
+                    @for (int r = 0; r < Board.Rows.Length; r++)
+                    {
+                        var rowIndex = r;
+                        <div class="preview-row">
+                            @for (int c = 0; c < Board.Rows[rowIndex].Length; c++)
+                            {
+                                var colIndex = c;
+                                var cell = Board.Rows[rowIndex][colIndex];
+
+                                @if (cell is null)
+                                {
+                                    <span class="pcell outside"></span>
+                                }
+                                else if (cell.IsLetter && !cell.Revealed)
+                                {
+                                    <button class="pcell covered"
+                                            title="Scopri solo questa casella"
+                                            disabled="@(Board.Status != BoardStatus.Playing)"
+                                            @onclick="() => Board.RevealCell(rowIndex, colIndex)">@cell.Display</button>
+                                }
+                                else if (cell.IsLetter)
+                                {
+                                    <span class="pcell revealed @(cell.Flash ? "flash" : "")">@cell.Display</span>
+                                }
+                                else if (cell.Display == ' ')
+                                {
+                                    <span class="pcell empty"></span>
+                                }
+                                else
+                                {
+                                    <span class="pcell revealed">@cell.Display</span>
+                                }
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="keyboard-head">
+                    <h3>Chiama una lettera</h3>
+                    <span class="keyboard-hint">o premi il tasto sulla tastiera</span>
+                </div>
+
+                @* Due file di tasti — consonanti e vocali — dalla stessa marcatura. *@
+                @foreach (var group in KeyboardRows)
+                {
+                    <div class="keyboard @group.RowClass">
+                        @foreach (var letter in group.Letters)
+                        {
+                            var called = FindCall(letter);
+
+                            <button class="key @group.KeyClass @KeyState(called)"
+                                    disabled="@(!Board.CanCall(letter))"
+                                    aria-label="Chiama la lettera @letter"
+                                    @onclick="() => Board.CallLetter(letter)">
+                                <span class="key-letter">@letter</span>
+                                @if (called is { Count: > 0 })
+                                {
+                                    <span class="key-count">@called.Value.Count</span>
+                                }
+                            </button>
+                        }
+                    </div>
+                }
+
+                @if (Board.LastCalled is not null && Board.Status == BoardStatus.Playing)
+                {
+                    <div class="call-result @(Board.LastCalledCount == 0 ? "bad" : "good")" role="status">
+                        <strong>@Board.LastCalled</strong>
+                        @if (Board.LastCalledCount == 0)
+                        {
+                            <span>non c'è — il turno passa</span>
+                        }
+                        else
+                        {
+                            <span>
+                                presente @Board.LastCalledCount
+                                @(Board.LastCalledCount == 1 ? "volta" : "volte") — il turno resta
+                            </span>
+                        }
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="idle">
+                    <div class="idle-icon" aria-hidden="true">🎡</div>
+                    <p>
+                        @(Board.PuzzleCount == 0
+                            ? "Scegli almeno un tema per cominciare."
+                            : "Tutto pronto: manda la prima frase.")
+                    </p>
+                </div>
+            }
+
+            <!-- ---------------- Concorrenti ---------------- -->
+            <div class="players-head">
+                <h3>Concorrenti</h3>
+
+                <label class="players-count">
+                    quanti
+                    <input type="number" min="1" max="4" value="@Board.Players.Count"
+                           @onchange="OnPlayerCountChange" />
+                </label>
+
+                <button class="btn-mini" @onclick="Board.AdvanceTurn">⏭ Passa turno</button>
+                <button class="btn-mini" @onclick="Board.ResetScores">Azzera tutti</button>
+            </div>
+
+            <div class="players">
+                @for (int i = 0; i < Board.Players.Count; i++)
+                {
+                    var index = i;
+                    var player = Board.Players[index];
+
+                    <div class="player @(index == Board.ActivePlayer ? "turn" : "") @(player.Enabled ? "" : "out")">
+                        <button class="player-turn" title="Dai il turno a @player.Name"
+                                disabled="@(!player.Enabled)"
+                                @onclick="() => Board.SetActivePlayer(index)">
+                            @(index == Board.ActivePlayer ? "🎯" : "○")
+                        </button>
+
+                        <input class="player-name" type="text" value="@player.Name"
+                               aria-label="Nome del concorrente @(index + 1)"
+                               @onchange="e => Board.SetPlayerName(index, e.Value?.ToString())" />
+
+                        <span class="player-score">@player.Score</span>
+
+                        <span class="player-buttons">
+                            <button class="plus" @onclick="() => Board.AddScore(index, 1)">+1</button>
+                            <button class="minus" @onclick="() => Board.AddScore(index, -1)">−1</button>
+                            <button class="minus" title="Azzera" @onclick="() => Board.ClearScore(index)">0</button>
+                        </span>
+
+                        <button class="player-toggle @(player.Enabled ? "" : "off")"
+                                @onclick="() => Board.TogglePlayerEnabled(index)">
+                            @(player.Enabled ? "⏸ Fuori" : "▶ Dentro")
+                        </button>
+                    </div>
+                }
+            </div>
+
+            <div class="custom-points">
+                <label for="points">Punti a piacere</label>
+                <input id="points" type="number" step="1" @bind="customPoints" />
+                <button class="btn-mini plus" @onclick="() => AwardCustomPoints(1)">
+                    aggiungi al turno
+                </button>
+                <button class="btn-mini minus" @onclick="() => AwardCustomPoints(-1)">
+                    togli al turno
+                </button>
+            </div>
+        </section>
+    </div>
+</div>
+
+@code {
+    // ---- Settaggi in modifica (applicati con "Applica") ----
+    private bool cfgShowCategory;
+    private bool cfgShowCalled;
+    private bool cfgShowScores;
+    private bool cfgShuffle;
+    private BoardLayout cfgLayout;
+    private string cfgRows = "";
+    private string cfgPreRevealed = "";
+    private PuzzleSource cfgSource;
+
+    // ---- Stato locale del pannello ----
+    private string manualText = "";
+    private string? message;
+    private int customPoints = 10;
+    private bool showShortcuts;
+    private HashSet<string> selectedThemes = new(StringComparer.OrdinalIgnoreCase);
+
+    // ---- Scorciatoie da tastiera (modulo JavaScript) ----
+    private IJSObjectReference? shortcutsModule;
+    private DotNetObjectReference<Admin>? selfReference;
+
+    private string StatusLabel => Board.Status switch
+    {
+        BoardStatus.Idle => "Pronto",
+        BoardStatus.Playing => "In gioco",
+        BoardStatus.Solved => "Risolto",
+        _ => ""
+    };
+
+    /// <summary>Percentuale di lettere scoperte, per la barra di avanzamento.</summary>
+    private int RevealedPercent
+    {
+        get
+        {
+            int revealed = Board.LettersRevealed;
+            int total = revealed + Board.LettersRemaining;
+            return total == 0 ? 0 : revealed * 100 / total;
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        cfgShowCategory = Board.ShowCategory;
+        cfgShowCalled = Board.ShowCalledOnDisplay;
+        cfgShowScores = Board.ShowScoresOnDisplay;
+        cfgShuffle = Board.Shuffle;
+        cfgLayout = Board.Layout;
+        cfgRows = Board.CustomRowsText;
+        cfgPreRevealed = Board.PreRevealed;
+        cfgSource = Board.Source;
+        selectedThemes = new HashSet<string>(Board.SelectedThemeIds, StringComparer.OrdinalIgnoreCase);
+
+        Board.OnChange += OnBoardChange;
+    }
+
+    /// <summary>
+    /// Registra le scorciatoie da tastiera. Il modulo JavaScript ascolta i tasti a
+    /// livello di finestra, così funzionano senza dover prima cliccare sulla pagina.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        try
+        {
+            // Il percorso va passato come relativo ("./..."): Assets restituisce il
+            // nome con l'impronta della versione, che da solo sarebbe un
+            // identificatore "bare" e non verrebbe risolto come modulo.
+            var modulePath = "./" + Assets["Components/Pages/Admin.razor.js"];
+
+            shortcutsModule = await JS.InvokeAsync<IJSObjectReference>("import", modulePath);
+            selfReference = DotNetObjectReference.Create(this);
+
+            await shortcutsModule.InvokeVoidAsync("registerShortcuts", selfReference);
+        }
+        catch (JSException)
+        {
+            // Le scorciatoie sono una comodità, non una funzione indispensabile:
+            // se il modulo non si carica si continua con la tastiera a video.
+            shortcutsModule = null;
+        }
+    }
+
+    private void OnBoardChange() => InvokeAsync(StateHasChanged);
+
+    // ============================================================
+    //  Tastiera a video
+    // ============================================================
+
+    /// <summary>Le due file della tastiera: consonanti sopra, vocali sotto.</summary>
+    private static readonly (string RowClass, string KeyClass, string Letters)[] KeyboardRows =
+    {
+        ("", "", Alphabet.Consonants),
+        ("vowels", "vowel", Alphabet.Vowels),
+    };
+
+    /// <summary>Come colorare un tasto: verde se trovata, rosso se assente.</summary>
+    private static string KeyState(CalledLetter? called) =>
+        called is null ? "" : called.Value.Found ? "found" : "miss";
+
+    /// <summary>La chiamata di questa lettera, se è già stata chiamata.</summary>
+    private CalledLetter? FindCall(char letter)
+    {
+        foreach (var called in Board.CalledLetters)
+            if (called.Letter == letter)
+                return called;
+
+        return null;
+    }
+
+    // ============================================================
+    //  Settaggi e frasi
+    // ============================================================
+
+    private void ApplyConfig()
+    {
+        Board.Configure(cfgShowCategory, cfgShowCalled, cfgShowScores, cfgShuffle,
+                        cfgLayout, cfgRows, cfgPreRevealed);
+
+        // Rileggo i valori normalizzati dal servizio: le righe illeggibili e le
+        // lettere doppie sono già state sistemate.
+        cfgRows = Board.CustomRowsText;
+        cfgPreRevealed = Board.PreRevealed;
+
+        message = Board.IsActive
+            ? "Settaggi applicati. La forma del tabellone vale dalla prossima frase."
+            : "Settaggi applicati.";
+    }
+
+    private void ChangeSource(PuzzleSource source)
+    {
+        cfgSource = source;
+        message = source == PuzzleSource.Program
+            ? Board.UseProgramThemes(selectedThemes).Message
+            : null;
+    }
+
+    private void ToggleTheme(string themeId, ChangeEventArgs e)
+    {
+        if (e.Value is true)
+            selectedThemes.Add(themeId);
+        else
+            selectedThemes.Remove(themeId);
+
+        message = Board.UseProgramThemes(selectedThemes).Message;
+    }
+
+    private void SelectAllThemes()
+    {
+        selectedThemes = Board.AvailableThemes
+            .Select(theme => theme.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        message = Board.UseProgramThemes(selectedThemes).Message;
+    }
+
+    private void ClearThemes()
+    {
+        selectedThemes.Clear();
+        message = Board.UseProgramThemes(selectedThemes).Message;
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        const long maxSize = 5 * 1024 * 1024;
+
+        try
+        {
+            using var reader = new StreamReader(e.File.OpenReadStream(maxSize));
+            var content = await reader.ReadToEndAsync();
+            message = Board.SetPuzzlesFromUpload(e.File.Name, content).Message;
+        }
+        catch (IOException ex)
+        {
+            message = $"Non riesco a leggere il file: {ex.Message}";
+        }
+    }
+
+    private void LoadManualPuzzles() =>
+        message = Board.SetPuzzlesFromText(manualText).Message;
+
+    // ============================================================
+    //  Concorrenti
+    // ============================================================
+
+    private void OnPlayerCountChange(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var count))
+            Board.SetPlayerCount(count);
+    }
+
+    /// <summary>Assegna (o toglie) i punti scritti a mano al concorrente di turno.</summary>
+    private void AwardCustomPoints(int sign) =>
+        Board.AddScore(Board.ActivePlayer, sign * Math.Abs(customPoints));
+
+    // ============================================================
+    //  Scorciatoie da tastiera
+    // ============================================================
+
+    /// <summary>
+    /// Riceve un tasto premuto dal modulo JavaScript. Viene chiamato solo quando il
+    /// fuoco non è in un campo di testo, così scrivere i nomi dei concorrenti non
+    /// chiama lettere per sbaglio.
+    /// </summary>
+    /// <param name="key">Il tasto, nella forma restituita da <c>KeyboardEvent.key</c>.</param>
+    /// <param name="ctrl">Se era premuto anche Ctrl.</param>
+    [JSInvokable]
+    public void OnShortcut(string key, bool ctrl)
+    {
+        switch (key)
+        {
+            case "Enter" when ctrl:
+                Board.Solve();
+                break;
+
+            case "Enter" when Board.IsActive:
+                Board.NextPuzzle();
+                break;
+
+            case "Enter":
+                Board.Start();
+                break;
+
+            case "ArrowRight":
+                Board.AdvanceTurn();
+                break;
+
+            case "+":
+                Board.AddScore(Board.ActivePlayer, 1);
+                break;
+
+            case "-":
+            case "−":
+                Board.AddScore(Board.ActivePlayer, -1);
+                break;
+
+            case "1" or "2" or "3" or "4":
+                Board.SetActivePlayer(key[0] - '1');
+                break;
+
+            default:
+                // Una lettera sola: la si chiama.
+                if (key.Length == 1 && BoardLayoutEngine.NormalizeLetter(key[0]) is { } letter)
+                    Board.CallLetter(letter);
+                break;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Board.OnChange -= OnBoardChange;
+
+        if (shortcutsModule is not null)
+        {
+            try
+            {
+                await shortcutsModule.InvokeVoidAsync("unregisterShortcuts");
+                await shortcutsModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // La pagina è già stata chiusa: non c'è più niente da ripulire.
+            }
+        }
+
+        selfReference?.Dispose();
+    }
+}

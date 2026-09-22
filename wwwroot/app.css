@@ -1,0 +1,233 @@
+/* ==========================================================================
+   La Ruota della Fortuna — fondamenta grafiche
+   --------------------------------------------------------------------------
+   Qui stanno i token (colori, raggi, ombre, tipografia) e i pochi stili
+   globali. Ogni pagina ha poi il suo file CSS *scoped* (Pagina.razor.css),
+   così gli stili non si pestano i piedi fra loro.
+
+   Nessun font e nessun CSS vengono scaricati da Internet: l'applicazione
+   deve funzionare su una rete locale senza connessione.
+   ========================================================================== */
+
+:root {
+    /* ---- Colori: studio televisivo, viola profondo e ottone ---- */
+    --c-bg: #0b0418;
+    --c-bg-deep: #07020f;
+    --c-surface: #180d2e;
+    --c-surface-2: #21143d;
+    --c-surface-3: #2c1b4f;
+    --c-border: #3a2566;
+    --c-border-soft: #2a1a4a;
+
+    --c-text: #f2ecfb;
+    --c-text-dim: #b9a6da;
+    --c-text-faint: #8875b0;
+
+    --c-gold: #ffc94a;
+    --c-gold-soft: #ffe9a8;
+    --c-gold-deep: #b8821c;
+
+    --c-violet: #8b5cf6;
+    --c-violet-soft: #c4a6ff;
+
+    --c-green: #2fd98a;
+    --c-green-deep: #0e7a4a;
+    --c-green-cell: #128a58;
+    --c-green-cell-deep: #0a5a38;
+
+    --c-red: #ff6b6b;
+    --c-red-deep: #6d1b1b;
+
+    --c-blue: #56b8ff;
+    --c-blue-deep: #14406b;
+
+    /* ---- Raggi ---- */
+    --r-sm: 6px;
+    --r-md: 10px;
+    --r-lg: 16px;
+    --r-xl: 22px;
+    --r-pill: 999px;
+
+    /* ---- Ombre ---- */
+    --sh-sm: 0 1px 2px rgba(0, 0, 0, .3);
+    --sh-md: 0 4px 14px rgba(0, 0, 0, .35);
+    --sh-lg: 0 12px 40px rgba(0, 0, 0, .5);
+    --sh-gold: 0 0 24px rgba(255, 201, 74, .35);
+    --sh-inset: inset 0 1px 0 rgba(255, 255, 255, .06);
+
+    /* ---- Tipografia ---- */
+    --f-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --f-board: "Georgia", "Times New Roman", "Palatino Linotype", serif;
+    --f-mono: "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;
+
+    /* ---- Spaziature ---- */
+    --s-1: .25rem;
+    --s-2: .5rem;
+    --s-3: .75rem;
+    --s-4: 1rem;
+    --s-5: 1.5rem;
+    --s-6: 2rem;
+
+    /* ---- Sfondo "riflettore" comune a tutte le schermate ---- */
+    --bg-spotlight:
+        radial-gradient(ellipse 120% 80% at 50% -10%, rgba(139, 92, 246, .28) 0%, transparent 60%),
+        radial-gradient(ellipse 90% 60% at 50% 110%, rgba(255, 201, 74, .10) 0%, transparent 65%),
+        linear-gradient(180deg, var(--c-bg) 0%, var(--c-bg-deep) 100%);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    font-family: var(--f-ui);
+    color: var(--c-text);
+    background: var(--c-bg-deep);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+/* Niente selezione accidentale di lettere e bottoni mentre si conduce. */
+button {
+    font-family: inherit;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+a {
+    color: var(--c-blue);
+}
+
+/* ---- Accessibilità: il focus da tastiera si deve vedere sempre ---- */
+:focus-visible {
+    outline: 3px solid var(--c-gold);
+    outline-offset: 2px;
+    border-radius: var(--r-sm);
+}
+
+button:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* ---- Chi preferisce meno animazioni non le subisce ---- */
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+    }
+}
+
+/* ---- Barre di scorrimento in tema ---- */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--c-border) transparent;
+}
+
+*::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: var(--c-border);
+    border-radius: var(--r-pill);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: var(--c-surface-3);
+}
+
+/* ==========================================================================
+   Pagine di servizio (errore, pagina non trovata) e banner di errore Blazor
+   ========================================================================== */
+
+.page-simple {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s-4);
+    padding: var(--s-6);
+    text-align: center;
+    background: var(--bg-spotlight);
+}
+
+.page-simple h1 {
+    margin: 0;
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    letter-spacing: .02em;
+}
+
+.page-simple p {
+    margin: 0;
+    max-width: 46ch;
+    line-height: 1.6;
+    color: var(--c-text-dim);
+}
+
+.page-simple code {
+    padding: .1rem .4rem;
+    border-radius: var(--r-sm);
+    background: rgba(255, 255, 255, .08);
+    font-family: var(--f-mono);
+    font-size: .9em;
+}
+
+.page-simple .back-link {
+    margin-top: var(--s-2);
+    padding: .7rem 1.4rem;
+    border-radius: var(--r-pill);
+    background: var(--c-gold);
+    color: #2a1a00;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: var(--sh-gold);
+}
+
+.page-simple .back-link:hover {
+    filter: brightness(1.08);
+}
+
+#blazor-error-ui {
+    display: none;
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 1000;
+    padding: var(--s-4) var(--s-5);
+    background: var(--c-red-deep);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, .5);
+}
+
+#blazor-error-ui .reload {
+    color: var(--c-gold-soft);
+    margin-left: var(--s-3);
+}
+
+#blazor-error-ui .dismiss {
+    position: absolute;
+    top: .4rem;
+    right: .8rem;
+    cursor: pointer;
+}
+
+.blazor-error-boundary {
+    padding: var(--s-4);
+    border-radius: var(--r-md);
+    background: var(--c-red-deep);
+    color: #fff;
+}
+
+.blazor-error-boundary::after {
+    content: "Si è verificato un errore.";
+}

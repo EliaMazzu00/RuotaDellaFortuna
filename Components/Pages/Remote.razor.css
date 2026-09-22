@@ -1,0 +1,207 @@
+/* ==========================================================================
+   Tastiera per telefono e tablet
+   --------------------------------------------------------------------------
+   Pensata per il pollice: tasti grandi, sei per riga, niente da leggere in
+   piccolo. Le misure usano vw/vh perché lo schermo è quello che è.
+   ========================================================================== */
+
+.remote {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3vh;
+    padding: max(3vh, env(safe-area-inset-top)) 4vw max(3vh, env(safe-area-inset-bottom));
+    background: var(--bg-spotlight);
+    overflow: hidden;
+}
+
+/* ==========================================================================
+   Intestazione
+   ========================================================================== */
+
+.head {
+    text-align: center;
+}
+
+.category {
+    color: var(--c-gold);
+    font-family: var(--f-board);
+    font-size: clamp(1.3rem, 6vw, 2.2rem);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: .06em;
+}
+
+.remaining {
+    margin-top: .8vh;
+    color: var(--c-text-faint);
+    font-size: clamp(.8rem, 3.4vw, 1rem);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+/* ==========================================================================
+   Tasti
+   ========================================================================== */
+
+.keys {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 2vw;
+    width: 100%;
+    max-width: 560px;
+}
+
+.key {
+    position: relative;
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--c-border);
+    border-bottom-width: 3px;
+    border-radius: var(--r-lg);
+    background: linear-gradient(180deg, var(--c-surface-3) 0%, var(--c-surface-2) 100%);
+    color: var(--c-text);
+    font-family: var(--f-board);
+    font-size: clamp(1.1rem, 5.5vw, 1.9rem);
+    font-weight: 700;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .08s ease, filter .12s ease;
+}
+
+.key:active:not(:disabled) {
+    transform: scale(.94);
+    filter: brightness(1.3);
+}
+
+/* Le vocali si distinguono a colpo d'occhio. */
+.key.vowel {
+    background: linear-gradient(180deg, #24507f 0%, var(--c-blue-deep) 100%);
+    border-color: #2f6ba8;
+}
+
+/* Lettera trovata: verde, con quante celle ha scoperto. */
+.key.found {
+    background: linear-gradient(180deg, #1f9a63 0%, var(--c-green-deep) 100%);
+    border-color: #2fd98a;
+    color: #eafff4;
+}
+
+/* Lettera assente: rossa e barrata. */
+.key.miss {
+    background: var(--c-red-deep);
+    border-color: #8f2a2a;
+    color: #ffb3b3;
+    text-decoration: line-through;
+}
+
+.count {
+    position: absolute;
+    top: 4%;
+    right: 8%;
+    color: #b6ffd9;
+    font-family: var(--f-ui);
+    font-size: .6em;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.key:disabled {
+    cursor: default;
+}
+
+/* Non chiamata ma non chiamabile: quasi invisibile. */
+.key:disabled:not(.found):not(.miss) {
+    opacity: .3;
+}
+
+/* ==========================================================================
+   Esito dell'ultima chiamata
+   ========================================================================== */
+
+.result {
+    display: flex;
+    align-items: center;
+    gap: 3vw;
+    padding: 1.4vh 6vw;
+    border-radius: var(--r-pill);
+    font-size: clamp(1rem, 4.5vw, 1.5rem);
+    font-weight: 700;
+    animation: result-in .2s ease-out both;
+}
+
+.result strong {
+    font-family: var(--f-board);
+    font-size: 1.5em;
+    line-height: 1;
+}
+
+.result.good {
+    background: rgba(47, 217, 138, .16);
+    color: #9dffc9;
+}
+
+.result.bad {
+    background: rgba(255, 107, 107, .14);
+    color: #ffb3b3;
+}
+
+@keyframes result-in {
+    from {
+        transform: scale(.92);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* ==========================================================================
+   Attesa e frase risolta
+   ========================================================================== */
+
+.state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5vh;
+    text-align: center;
+}
+
+.state-icon {
+    font-size: clamp(3.5rem, 18vw, 7rem);
+    filter: drop-shadow(0 0 5vh rgba(255, 201, 74, .3));
+}
+
+.state-icon.spin {
+    animation: state-spin 14s linear infinite;
+}
+
+@keyframes state-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.state-text {
+    color: var(--c-text);
+    font-family: var(--f-board);
+    font-size: clamp(1.6rem, 8vw, 3rem);
+    font-weight: 700;
+}
+
+.state.good .state-text {
+    color: var(--c-green);
+}
+
+.state-sub {
+    color: var(--c-text-faint);
+    font-size: clamp(.85rem, 3.6vw, 1.1rem);
+    letter-spacing: .08em;
+}

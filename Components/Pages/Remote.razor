@@ -1,0 +1,85 @@
+@page "/remote"
+@layout BareLayout
+@implements IDisposable
+@inject BoardService Board
+
+@*
+    Tastiera per telefono e tablet: serve a chiamare le lettere stando seduti.
+    Mostra la categoria e quanto manca, ma non la frase.
+*@
+
+<PageTitle>Tastiera — La Ruota della Fortuna</PageTitle>
+
+<div class="remote">
+
+    @if (Board.Status == BoardStatus.Playing)
+    {
+        <header class="head">
+            <div class="category">@Board.Category</div>
+            <div class="remaining">@Board.LettersRemaining lettere da scoprire</div>
+        </header>
+
+        <div class="keys">
+            @foreach (var letter in Alphabet.All)
+            {
+                var called = FindCall(letter);
+
+                <button class="key @(Alphabet.Vowels.Contains(letter) ? "vowel" : "") @StateClass(called)"
+                        disabled="@(!Board.CanCall(letter))"
+                        aria-label="Chiama la lettera @letter"
+                        @onclick="() => Board.CallLetter(letter)">
+                    @letter
+                    @if (called is { Count: > 0 })
+                    {
+                        <span class="count">@called.Value.Count</span>
+                    }
+                </button>
+            }
+        </div>
+
+        @if (Board.LastCalled is not null)
+        {
+            <div class="result @(Board.LastCalledCount == 0 ? "bad" : "good")" role="status">
+                <strong>@Board.LastCalled</strong>
+                @(Board.LastCalledCount == 0 ? "non c'è" : $"× {Board.LastCalledCount}")
+            </div>
+        }
+    }
+    else if (Board.Status == BoardStatus.Solved)
+    {
+        <div class="state good">
+            <div class="state-icon" aria-hidden="true">✅</div>
+            <div class="state-text">Frase risolta!</div>
+            <div class="state-sub">Aspetta la prossima</div>
+        </div>
+    }
+    else
+    {
+        <div class="state">
+            <div class="state-icon spin" aria-hidden="true">🎡</div>
+            <div class="state-text">In attesa</div>
+            <div class="state-sub">La regia non ha ancora mandato la frase</div>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>La chiamata di questa lettera, se è già stata chiamata.</summary>
+    private CalledLetter? FindCall(char letter)
+    {
+        foreach (var called in Board.CalledLetters)
+            if (called.Letter == letter)
+                return called;
+
+        return null;
+    }
+
+    private static string StateClass(CalledLetter? called) =>
+        called is null ? "" : called.Value.Found ? "found" : "miss";
+
+    protected override void OnInitialized() => Board.OnChange += OnBoardChange;
+
+    private void OnBoardChange() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Board.OnChange -= OnBoardChange;
+}

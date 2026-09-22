@@ -1,0 +1,470 @@
+/* ==========================================================================
+   Tabellone a schermo intero
+   --------------------------------------------------------------------------
+   Tutto è dimensionato in unità di viewport e legato a --cell, la misura di
+   una casella: così il tabellone riempie lo schermo che trova (TV, monitor,
+   proiettore) senza uscirne, sia con 4 righe da 14 sia con 8 righe da 30.
+   ========================================================================== */
+
+.display {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: var(--c-text);
+    background: var(--bg-spotlight);
+    transition: background .6s ease;
+}
+
+/* Alone di luce dietro al tabellone, come il fondale di uno studio. */
+.display::before {
+    content: "";
+    position: absolute;
+    inset: -20%;
+    background: radial-gradient(circle at 50% 45%, rgba(139, 92, 246, .22) 0%, transparent 55%);
+    pointer-events: none;
+}
+
+.display.is-solved {
+    background:
+        radial-gradient(ellipse 120% 80% at 50% -10%, rgba(47, 217, 138, .3) 0%, transparent 60%),
+        linear-gradient(180deg, #05160e 0%, #020905 100%);
+}
+
+/* ==========================================================================
+   Angoli: lettere omaggio e contatore delle frasi
+   ========================================================================== */
+
+.corners {
+    position: absolute;
+    inset: min(2vh, 1.4vw) min(2vw, 2vh) auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.gift {
+    padding: min(1vh, .7vw) min(1vw, 1.4vh);
+    border: 1px solid rgba(255, 201, 74, .45);
+    border-radius: var(--r-md);
+    background: rgba(255, 201, 74, .08);
+    backdrop-filter: blur(4px);
+    text-align: center;
+}
+
+.gift-label {
+    margin-bottom: .5vh;
+    color: var(--c-gold);
+    font-size: min(.85vw, 1.5vh);
+    font-weight: 700;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+}
+
+.gift-letters {
+    display: flex;
+    gap: .35vw;
+    justify-content: center;
+}
+
+.gift-letter {
+    display: grid;
+    place-items: center;
+    width: min(2vw, 3.6vh);
+    height: min(2vw, 3.6vh);
+    border-radius: var(--r-sm);
+    background: rgba(255, 201, 74, .2);
+    color: var(--c-gold-soft);
+    font-family: var(--f-board);
+    font-size: min(1.3vw, 2.3vh);
+    font-weight: 700;
+}
+
+.counter {
+    margin-left: auto;
+    padding: min(.8vh, .6vw) min(1.2vw, 1.6vh);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-pill);
+    background: rgba(0, 0, 0, .3);
+    color: var(--c-text-faint);
+    font-size: min(1.1vw, 2vh);
+    font-weight: 700;
+    letter-spacing: .04em;
+}
+
+.counter-now {
+    color: var(--c-text);
+}
+
+/* ==========================================================================
+   Fascia della categoria
+   ========================================================================== */
+
+.category {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    padding: min(2.4vh, 1.6vw) 6vw min(1vh, .8vw);
+}
+
+.category-plate {
+    max-width: 88vw;
+    padding: min(1vh, .7vw) min(3vw, 4vh);
+    border-top: 2px solid rgba(255, 201, 74, .5);
+    border-bottom: 2px solid rgba(255, 201, 74, .5);
+    color: var(--c-gold);
+    font-family: var(--f-board);
+    font-size: min(3vw, 5.2vh);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: .22em;
+    text-align: center;
+    text-shadow: 0 .2vw 1.4vw rgba(0, 0, 0, .7);
+}
+
+/* ==========================================================================
+   Palco centrale
+   ========================================================================== */
+
+.stage {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: min(2.4vh, 1.6vw);
+    padding: min(1.5vh, 1vw) 3vw;
+    position: relative;
+}
+
+/* ==========================================================================
+   Il tabellone
+   --------------------------------------------------------------------------
+   --cell è calcolata per stare contemporaneamente in larghezza e in altezza:
+   la larghezza totale vale circa cella·(1,15·colonne) contando i vuoti fra le
+   celle, l'altezza circa cella·(1,4·righe).
+   ========================================================================== */
+
+.board {
+    --cols: 14;
+    --rows: 4;
+    /* Il tetto di 13vh evita celle assurde quando le righe sono pochissime;
+       negli altri casi decidono la larghezza e l'altezza dello schermo. */
+    --cell: min(13vh,
+        calc(92vw / (var(--cols) * 1.15)),
+        calc(80vh / (var(--rows) * 1.4)));
+
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--cell) * .1);
+    padding: calc(var(--cell) * .26);
+    border: calc(var(--cell) * .07) solid transparent;
+    border-radius: calc(var(--cell) * .22);
+    /* Cornice in ottone: il bordo è un gradiente, non un colore piatto. */
+    background:
+        linear-gradient(#150a2b, #150a2b) padding-box,
+        linear-gradient(160deg, #d8a94a 0%, #7a5418 35%, #f0cd7a 55%, #6b4712 100%) border-box;
+    box-shadow:
+        0 2vh 6vh rgba(0, 0, 0, .7),
+        inset 0 0 3vh rgba(108, 67, 168, .4);
+}
+
+.board-row {
+    display: flex;
+    gap: calc(var(--cell) * .1);
+}
+
+.cell {
+    width: var(--cell);
+    height: calc(var(--cell) * 1.22);
+    display: grid;
+    place-items: center;
+    border-radius: calc(var(--cell) * .08);
+    font-family: var(--f-board);
+    font-size: calc(var(--cell) * .78);
+    font-weight: 700;
+    line-height: 1;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Posizione fuori dalla riga: non c'è nessuna casella. */
+.cell.outside {
+    background: transparent;
+}
+
+/* Casella verde: dentro al tabellone, senza lettera. */
+.cell.empty {
+    background: linear-gradient(180deg, var(--c-green-cell) 0%, var(--c-green-cell-deep) 100%);
+    box-shadow:
+        inset 0 calc(var(--cell) * -.05) 0 rgba(0, 0, 0, .35),
+        inset 0 1px 0 rgba(255, 255, 255, .12);
+}
+
+/* Lettera ancora coperta. */
+.cell.letter.covered {
+    background: linear-gradient(180deg, #fdfdff 0%, #ccd3e2 100%);
+    box-shadow:
+        inset 0 calc(var(--cell) * -.06) 0 rgba(0, 0, 0, .14),
+        inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+
+/* Lettera scoperta e punteggiatura, sempre visibile. */
+.cell.letter.revealed,
+.cell.fixed {
+    background: linear-gradient(180deg, #ffffff 0%, #e6ebf5 100%);
+    color: #14102b;
+    box-shadow:
+        inset 0 calc(var(--cell) * -.06) 0 rgba(0, 0, 0, .14),
+        inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+
+.cell.letter.revealed {
+    animation: cell-flip .45s cubic-bezier(.2, .8, .3, 1) both;
+}
+
+.glyph {
+    display: block;
+}
+
+/* Cella appena girata: resta accesa per un momento. */
+.cell.letter.flash {
+    background: linear-gradient(180deg, var(--c-gold-soft) 0%, var(--c-gold) 100%);
+    color: #2b1c00;
+    box-shadow: 0 0 2vh rgba(255, 201, 74, .9), inset 0 1px 0 rgba(255, 255, 255, .8);
+}
+
+@keyframes cell-flip {
+    from {
+        transform: perspective(40vh) rotateY(88deg);
+        filter: brightness(1.6);
+    }
+
+    to {
+        transform: perspective(40vh) rotateY(0deg);
+        filter: brightness(1);
+    }
+}
+
+/* ==========================================================================
+   Frase risolta
+   ========================================================================== */
+
+.solved {
+    flex-shrink: 0;
+    padding: 0 2vw;
+    color: #9dffc9;
+    font-family: var(--f-board);
+    font-size: min(5vw, 7.5vh);
+    font-weight: 700;
+    letter-spacing: .3em;
+    text-transform: uppercase;
+    text-shadow: 0 0 4vh rgba(47, 217, 138, .7);
+    animation: solved-in .45s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+
+@keyframes solved-in {
+    from {
+        transform: scale(.7);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* ==========================================================================
+   Schermata di attesa
+   ========================================================================== */
+
+.waiting {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5vh;
+    text-align: center;
+}
+
+.waiting-wheel {
+    font-size: min(12vw, 18vh);
+    filter: drop-shadow(0 0 4vh rgba(255, 201, 74, .35));
+    animation: waiting-float 5s ease-in-out infinite;
+}
+
+@keyframes waiting-float {
+
+    0%,
+    100% {
+        transform: translateY(0) rotate(-4deg);
+    }
+
+    50% {
+        transform: translateY(-1.6vh) rotate(4deg);
+    }
+}
+
+.waiting-text {
+    font-family: var(--f-board);
+    font-size: min(5vw, 8vh);
+    font-weight: 700;
+    letter-spacing: .06em;
+    background: linear-gradient(180deg, #fff 0%, var(--c-gold) 95%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.waiting-sub {
+    color: var(--c-text-faint);
+    font-size: min(1.8vw, 3vh);
+    letter-spacing: .2em;
+    text-transform: uppercase;
+}
+
+/* ==========================================================================
+   Lettere già chiamate
+   ========================================================================== */
+
+.called {
+    flex-shrink: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: min(.55vw, .95vh);
+    justify-content: center;
+    max-width: 90vw;
+}
+
+.called-letter {
+    display: grid;
+    place-items: center;
+    min-width: 24px;
+    min-height: 24px;
+    width: min(2.6vw, 4.2vh);
+    height: min(2.6vw, 4.2vh);
+    border-radius: var(--r-sm);
+    font-family: var(--f-board);
+    font-size: min(1.5vw, 2.5vh);
+    font-weight: 700;
+}
+
+.called-letter.found {
+    border: 1px solid rgba(47, 217, 138, .5);
+    background: rgba(47, 217, 138, .18);
+    color: #9dffc9;
+}
+
+.called-letter.miss {
+    border: 1px solid rgba(255, 107, 107, .4);
+    background: rgba(255, 107, 107, .12);
+    color: #ffb3b3;
+    text-decoration: line-through;
+    opacity: .75;
+}
+
+/* ==========================================================================
+   Punteggi
+   ========================================================================== */
+
+.scores {
+    flex-shrink: 0;
+    display: flex;
+    gap: min(1.6vw, 2.6vh);
+    justify-content: center;
+    align-items: flex-end;
+    padding: min(1.6vh, 1vw) 3vw min(2.6vh, 1.6vw);
+}
+
+.score {
+    min-width: min(16vw, 28vh);
+    padding: min(1.2vh, .8vw) min(1.8vw, 2.4vh);
+    border: .15vh solid var(--c-border);
+    border-radius: var(--r-lg);
+    background: linear-gradient(180deg, rgba(255, 255, 255, .08) 0%, rgba(255, 255, 255, .02) 100%);
+    text-align: center;
+    transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+
+/* Il concorrente di turno si solleva: si capisce a chi tocca da lontano. */
+.score.turn {
+    transform: translateY(min(-1.2vh, -.8vw));
+    border-color: var(--c-gold);
+    background: linear-gradient(180deg, rgba(255, 201, 74, .2) 0%, rgba(255, 201, 74, .05) 100%);
+    box-shadow: 0 0 3vh rgba(255, 201, 74, .4);
+}
+
+.score.out {
+    opacity: .3;
+    filter: grayscale(.9);
+}
+
+.score-name {
+    color: var(--c-violet-soft);
+    font-size: min(1.4vw, 2.4vh);
+    font-weight: 700;
+    letter-spacing: .08em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.score.turn .score-name {
+    color: var(--c-gold);
+}
+
+.score-value {
+    font-family: var(--f-board);
+    font-size: min(2.8vw, 4.6vh);
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.score-turn {
+    color: var(--c-gold);
+    font-size: min(.85vw, 1.5vh);
+    letter-spacing: .18em;
+    text-transform: uppercase;
+}
+
+/* ==========================================================================
+   Schermi in verticale (telefono usato come tabellone di scorta)
+   ========================================================================== */
+
+@media (orientation: portrait) and (max-width: 860px) {
+    .board {
+        --cell: min(7vh, calc(94vw / (var(--cols) * 1.15)), calc(60vh / (var(--rows) * 1.4)));
+    }
+
+    .category-plate {
+        font-size: min(5vw, 4vh);
+        letter-spacing: .12em;
+    }
+
+    /* In verticale i punteggi restano su una riga, stretti quanto serve. */
+    .scores {
+        gap: 2vw;
+        padding-left: 2vw;
+        padding-right: 2vw;
+    }
+
+    .score {
+        flex: 1;
+        min-width: 0;
+        padding-left: var(--s-2);
+        padding-right: var(--s-2);
+    }
+
+    .score-name {
+        font-size: min(3vw, 2.2vh);
+    }
+
+    .score-value {
+        font-size: min(5vw, 3.6vh);
+    }
+}

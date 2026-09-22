@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version>1.0.0</Version>
+
+    <!-- La navigazione fuori da un contesto interattivo non deve sollevare eccezioni. -->
+    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+
+    <!-- La cartella di pubblicazione sta dentro al progetto: non va trattata come sorgente. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);publish-win-x64-self-contained\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <!-- Le frasi del programma devono stare accanto all'eseguibile, sia in compilazione
+       sia in pubblicazione: PuzzleLibrary le cerca in ContentRootPath/frasi. -->
+  <ItemGroup>
+    <Content Include="frasi\**\*.txt"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

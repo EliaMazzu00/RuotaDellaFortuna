@@ -1,0 +1,231 @@
+/* ==========================================================================
+   Menu di ingresso: scelta della schermata e indirizzi per gli altri schermi
+   ========================================================================== */
+
+.landing {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s-6);
+    padding: var(--s-6) var(--s-4);
+    background: var(--bg-spotlight);
+    text-align: center;
+}
+
+/* ---- Intestazione ---- */
+.hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--s-2);
+}
+
+.wheel {
+    display: grid;
+    place-items: center;
+    width: 5.5rem;
+    height: 5.5rem;
+    margin-bottom: var(--s-2);
+    border-radius: 50%;
+    background:
+        conic-gradient(from 0deg,
+            var(--c-gold) 0deg 30deg,
+            var(--c-violet) 30deg 60deg,
+            var(--c-green) 60deg 90deg,
+            var(--c-gold) 90deg 120deg,
+            var(--c-violet) 120deg 150deg,
+            var(--c-green) 150deg 180deg,
+            var(--c-gold) 180deg 210deg,
+            var(--c-violet) 210deg 240deg,
+            var(--c-green) 240deg 270deg,
+            var(--c-gold) 270deg 300deg,
+            var(--c-violet) 300deg 330deg,
+            var(--c-green) 330deg 360deg);
+    box-shadow: var(--sh-lg), 0 0 40px rgba(255, 201, 74, .3);
+    animation: wheel-spin 28s linear infinite;
+}
+
+.wheel-hub {
+    display: grid;
+    place-items: center;
+    width: 3.2rem;
+    height: 3.2rem;
+    border-radius: 50%;
+    background: var(--c-bg-deep);
+    font-size: 1.6rem;
+    /* Il mozzo non gira con la ruota, così l'emoji resta leggibile. */
+    animation: wheel-spin 28s linear infinite reverse;
+}
+
+@keyframes wheel-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.landing h1 {
+    margin: 0;
+    font-family: var(--f-board);
+    font-size: clamp(2.2rem, 7vw, 4.4rem);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: .01em;
+    background: linear-gradient(180deg, #fff 0%, var(--c-gold) 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.tagline {
+    margin: 0;
+    color: var(--c-violet-soft);
+    font-size: clamp(.95rem, 2.4vw, 1.2rem);
+    letter-spacing: .18em;
+    text-transform: uppercase;
+}
+
+/* ---- Le tre schermate ---- */
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: var(--s-4);
+    width: min(100%, 880px);
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--s-1);
+    padding: var(--s-5) var(--s-4);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-xl);
+    background: linear-gradient(180deg, rgba(255, 255, 255, .06) 0%, rgba(255, 255, 255, .02) 100%);
+    box-shadow: var(--sh-md), var(--sh-inset);
+    color: var(--c-text);
+    text-decoration: none;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.card:hover,
+.card:focus-visible {
+    transform: translateY(-5px);
+    box-shadow: var(--sh-lg);
+}
+
+.card-icon {
+    font-size: 2.6rem;
+    line-height: 1;
+}
+
+.card-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: .01em;
+}
+
+.card-desc {
+    color: var(--c-text-dim);
+    font-size: .95rem;
+    line-height: 1.4;
+}
+
+.card-hint {
+    margin-top: var(--s-2);
+    padding: .2rem .7rem;
+    border-radius: var(--r-pill);
+    background: rgba(255, 255, 255, .07);
+    color: var(--c-text-faint);
+    font-size: .78rem;
+}
+
+/* Ogni schermata ha il suo colore, lo stesso che ritrova dentro. */
+.card-admin:hover {
+    border-color: var(--c-gold);
+}
+
+.card-admin .card-title {
+    color: var(--c-gold);
+}
+
+.card-display:hover {
+    border-color: var(--c-green);
+}
+
+.card-display .card-title {
+    color: var(--c-green);
+}
+
+.card-remote:hover {
+    border-color: var(--c-blue);
+}
+
+.card-remote .card-title {
+    color: var(--c-blue);
+}
+
+/* ---- Indirizzi per gli altri dispositivi ---- */
+.lan {
+    width: min(100%, 680px);
+    padding: var(--s-4) var(--s-5);
+    border: 1px dashed var(--c-border);
+    border-radius: var(--r-lg);
+    background: rgba(0, 0, 0, .25);
+}
+
+.lan h2 {
+    margin: 0 0 var(--s-3);
+    color: var(--c-text-dim);
+    font-size: .85rem;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+}
+
+.lan-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    justify-content: center;
+    margin: 0 0 var(--s-3);
+    padding: 0;
+    list-style: none;
+}
+
+.lan-list code {
+    display: inline-block;
+    padding: .35rem .8rem;
+    border-radius: var(--r-md);
+    background: rgba(86, 184, 255, .12);
+    color: #a9dcff;
+    font-family: var(--f-mono);
+    font-size: .95rem;
+    -webkit-user-select: all;
+    user-select: all;
+}
+
+.lan-note {
+    margin: 0;
+    color: var(--c-text-faint);
+    font-size: .85rem;
+    line-height: 1.6;
+}
+
+.lan-note code {
+    padding: .1rem .35rem;
+    border-radius: var(--r-sm);
+    background: rgba(255, 255, 255, .08);
+    font-family: var(--f-mono);
+}
+
+.lan-note.firewall {
+    margin-top: var(--s-3);
+    padding-top: var(--s-3);
+    border-top: 1px solid var(--c-border-soft);
+}
+
+.lan-note.firewall strong {
+    color: var(--c-gold);
+}

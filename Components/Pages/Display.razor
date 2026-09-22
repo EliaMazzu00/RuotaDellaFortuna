@@ -1,0 +1,146 @@
+@page "/display"
+@layout BareLayout
+@implements IDisposable
+@inject BoardService Board
+
+@*
+    Il tabellone che guardano i concorrenti: solo quello che devono vedere.
+    Nessun messaggio sull'esito di una chiamata, nessuna frase in chiaro:
+    le celle si girano e basta.
+*@
+
+<PageTitle>Tabellone — La Ruota della Fortuna</PageTitle>
+
+<div class="display @StatusClass">
+
+    <div class="corners">
+        @if (Board.IsActive && Board.PreRevealed.Length > 0)
+        {
+            <div class="gift">
+                <div class="gift-label">Lettere omaggio</div>
+                <div class="gift-letters">
+                    @foreach (var letter in Board.PreRevealed)
+                    {
+                        <span class="gift-letter">@letter</span>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (Board.IsActive && Board.PuzzlesTotal > 1)
+        {
+            <div class="counter">
+                <span class="counter-now">@Board.PuzzleNumber</span>
+                <span class="counter-of">/ @Board.PuzzlesTotal</span>
+            </div>
+        }
+    </div>
+
+    @if (Board.ShowCategory && Board.IsActive)
+    {
+        <div class="category">
+            <span class="category-plate">@Board.Category</span>
+        </div>
+    }
+
+    <div class="stage">
+        @if (Board.IsActive)
+        {
+            <div class="board" style="--cols:@BoardColumns; --rows:@Board.Rows.Length">
+                @foreach (var row in Board.Rows)
+                {
+                    <div class="board-row">
+                        @foreach (var cell in row)
+                        {
+                            @if (cell is null)
+                            {
+                                <div class="cell outside"></div>
+                            }
+                            else if (cell.IsLetter)
+                            {
+                                <div class="cell letter @(cell.Revealed ? "revealed" : "covered") @(cell.Flash ? "flash" : "")">
+                                    @if (cell.Revealed)
+                                    {
+                                        <span class="glyph">@cell.Display</span>
+                                    }
+                                </div>
+                            }
+                            else if (cell.Display == ' ')
+                            {
+                                <div class="cell empty"></div>
+                            }
+                            else
+                            {
+                                <div class="cell fixed"><span class="glyph">@cell.Display</span></div>
+                            }
+                        }
+                    </div>
+                }
+            </div>
+
+            @if (Board.Status == BoardStatus.Solved)
+            {
+                <div class="solved" role="status">Risolto!</div>
+            }
+
+            @if (Board.ShowCalledOnDisplay && Board.CalledLetters.Count > 0)
+            {
+                <div class="called" aria-label="Lettere già chiamate">
+                    @foreach (var called in Board.CalledLetters)
+                    {
+                        <span class="called-letter @(called.Found ? "found" : "miss")">@called.Letter</span>
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            <div class="waiting">
+                <div class="waiting-wheel" aria-hidden="true">🎡</div>
+                <div class="waiting-text">La Ruota della Fortuna</div>
+                <div class="waiting-sub">In attesa della prossima frase…</div>
+            </div>
+        }
+    </div>
+
+    @if (Board.ShowScoresOnDisplay && Board.IsActive)
+    {
+        <div class="scores">
+            @for (int i = 0; i < Board.Players.Count; i++)
+            {
+                var player = Board.Players[i];
+                <div class="score @(i == Board.ActivePlayer ? "turn" : "") @(player.Enabled ? "" : "out")">
+                    <div class="score-name">@player.Name</div>
+                    <div class="score-value">@player.Score</div>
+                    @if (i == Board.ActivePlayer && player.Enabled)
+                    {
+                        <div class="score-turn">di turno</div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Celle per riga del tabellone corrente: serve al CSS per dimensionare le
+    /// celle in modo che il tabellone stia sempre nello schermo.
+    /// </summary>
+    private int BoardColumns => Board.Rows.Length == 0
+        ? BoardLayoutEngine.DefaultWidth
+        : Board.Rows.Max(row => row.Length);
+
+    private string StatusClass => Board.Status switch
+    {
+        BoardStatus.Solved => "is-solved",
+        BoardStatus.Playing => "is-playing",
+        _ => "is-idle"
+    };
+
+    protected override void OnInitialized() => Board.OnChange += OnBoardChange;
+
+    private void OnBoardChange() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Board.OnChange -= OnBoardChange;
+}

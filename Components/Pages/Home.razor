@@ -1,0 +1,81 @@
+@page "/"
+@layout BareLayout
+@inject IConfiguration Config
+
+<PageTitle>La Ruota della Fortuna</PageTitle>
+
+<div class="landing">
+
+    <header class="hero">
+        <div class="wheel" aria-hidden="true">
+            <span class="wheel-hub">🎡</span>
+        </div>
+        <h1>La Ruota della Fortuna</h1>
+        <p class="tagline">Il tabellone delle frasi misteriose</p>
+    </header>
+
+    <nav class="cards" aria-label="Schermate del gioco">
+        <a class="card card-admin" href="/admin">
+            <span class="card-icon" aria-hidden="true">🎛️</span>
+            <span class="card-title">Regia</span>
+            <span class="card-desc">Scegli le frasi, chiama le lettere, tieni i punti</span>
+            <span class="card-hint">da aprire sul PC che conduce</span>
+        </a>
+
+        <a class="card card-display" href="/display">
+            <span class="card-icon" aria-hidden="true">🧩</span>
+            <span class="card-title">Tabellone</span>
+            <span class="card-desc">Lo schermo grande che guardano i concorrenti</span>
+            <span class="card-hint">TV, proiettore o secondo monitor</span>
+        </a>
+
+        <a class="card card-remote" href="/remote">
+            <span class="card-icon" aria-hidden="true">📱</span>
+            <span class="card-title">Tastiera</span>
+            <span class="card-desc">Chiama le lettere dal telefono o dal tablet</span>
+            <span class="card-hint">comoda per i concorrenti</span>
+        </a>
+    </nav>
+
+    <section class="lan" aria-label="Come collegare gli altri dispositivi">
+        <h2>Per gli altri schermi, sulla stessa rete</h2>
+
+        @if (addresses.Count > 0)
+        {
+            <ul class="lan-list">
+                @foreach (var address in addresses)
+                {
+                    <li><code>http://@address:@port/display</code></li>
+                }
+            </ul>
+            <p class="lan-note">
+                Apri uno di questi indirizzi dal browser dell'altro dispositivo.
+                Per la tastiera del telefono, sostituisci <code>/display</code> con <code>/remote</code>.
+            </p>
+        }
+        else
+        {
+            <p class="lan-note">
+                Usa l'indirizzo IP di questo PC seguito da
+                <code>:@port/display</code>.
+            </p>
+        }
+
+        <p class="lan-note firewall">
+            Alla prima esecuzione Windows può chiedere di autorizzare l'app nel firewall:
+            consenti l'accesso alle <strong>reti private</strong>, altrimenti gli altri
+            dispositivi non riescono a collegarsi.
+        </p>
+    </section>
+</div>
+
+@code {
+    private IReadOnlyList<string> addresses = Array.Empty<string>();
+    private int port;
+
+    protected override void OnInitialized()
+    {
+        port = Config.GetValue("Server:Port", 5090);
+        addresses = NetworkInfo.GetLanAddresses();
+    }
+}
