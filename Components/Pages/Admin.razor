@@ -3,6 +3,7 @@
 @implements IAsyncDisposable
 @inject BoardService Board
 @inject IJSRuntime JS
+@inject ILogger<Admin> Logger
 
 @*
     Il pannello di regia: qui si prepara la partita e la si conduce.
@@ -530,20 +531,20 @@
 
         try
         {
-            // Il percorso va passato come relativo ("./..."): Assets restituisce il
-            // nome con l'impronta della versione, che da solo sarebbe un
-            // identificatore "bare" e non verrebbe risolto come modulo.
-            var modulePath = "./" + Assets["Components/Pages/Admin.razor.js"];
+            // Percorso relativo e senza impronta di versione: ci pensa la mappa dei
+            // moduli generata da <ImportMap /> a tradurlo nel file effettivo.
+            shortcutsModule = await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./Components/Pages/Admin.razor.js");
 
-            shortcutsModule = await JS.InvokeAsync<IJSObjectReference>("import", modulePath);
             selfReference = DotNetObjectReference.Create(this);
-
             await shortcutsModule.InvokeVoidAsync("registerShortcuts", selfReference);
         }
-        catch (JSException)
+        catch (JSException ex)
         {
-            // Le scorciatoie sono una comodità, non una funzione indispensabile:
-            // se il modulo non si carica si continua con la tastiera a video.
+            // Le scorciatoie sono una comodità, non una funzione indispensabile: se
+            // il modulo non si carica si continua con la sola tastiera a video, ma
+            // il motivo va a finire nel log, non nel nulla.
+            Logger.LogWarning(ex, "Scorciatoie da tastiera non attivate: modulo non caricato.");
             shortcutsModule = null;
         }
     }
